@@ -1,8 +1,10 @@
-
-name: ZN-M2 OpenWrt CI
+name: ZN-M2 OpenWrt v2
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -12,7 +14,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    # 🧠 增加Swap（关键）
+    # 🔥 防143核心：加Swap
     - name: Add swap
       run: |
         sudo fallocate -l 6G /swapfile
@@ -21,12 +23,12 @@ jobs:
         sudo swapon /swapfile
         free -h
 
-    - name: Install deps
+    - name: Install dependencies
       run: |
         sudo apt update
         sudo apt install -y build-essential clang flex bison g++ gawk \
         gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
-        python3-distutils rsync unzip zlib1g-dev file wget
+        python3-distutils rsync unzip zlib1g-dev file wget curl
 
     - name: Clone source
       run: |
@@ -39,7 +41,7 @@ jobs:
       run: |
         cp config/zn-m2.config openwrt/.config
 
-    - name: DIY script
+    - name: DIY
       run: |
         cd openwrt
         chmod +x ../diy/diy.sh
@@ -51,14 +53,32 @@ jobs:
         make defconfig
         make download -j8
 
-    # 🔥 核心：单线程编译（永不143）
+    # 🔥 核心：永不143
     - name: Build firmware
       run: |
         cd openwrt
         make -j1 V=s
 
-    - name: Upload firmware
-      uses: actions/upload-artifact@v4
+    - name: Prepare firmware
+      run: |
+        cd openwrt/bin/targets/
+        echo "FILE_DATE=$(date +%Y%m%d-%H%M)" >> $GITHUB_ENV
+
+    # 🧹 删除旧 Release
+    - name: Delete old Releases
+      uses: dev-drprasad/delete-older-releases@v0.2.1
       with:
-        name: ZN-M2-Firmware
-        path: openwrt/bin/targets/
+        keep_latest: 3
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # 🚀 发布 Release（重点）
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ZN-M2-${{ env.FILE_DATE }}
+        name: ZN-M2 Firmware ${{ env.FILE_DATE }}
+        files: openwrt/bin/targets/**/*
+
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
