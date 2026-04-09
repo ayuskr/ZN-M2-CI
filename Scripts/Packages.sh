@@ -7,6 +7,8 @@ UPDATE_PACKAGE() {
     BRANCH=$3
 
     rm -rf package/$NAME
+    rm -rf feeds/packages/net/mosdns
+    rm -rf feeds/luci/applications/luci-app-mosdns
     git clone --depth=1 -b $BRANCH https://github.com/$REPO.git package/$NAME
 }
 
@@ -18,7 +20,7 @@ echo "==== Custom Packages ===="
 UPDATE_PACKAGE passwall-packages xiaorouji/openwrt-passwall-packages main
 UPDATE_PACKAGE passwall xiaorouji/openwrt-passwall main
 
-# MosDNS（稳定版）
+# mosdns（完整替换）
 UPDATE_PACKAGE mosdns sbwml/luci-app-mosdns v5
 
 # Lucky
