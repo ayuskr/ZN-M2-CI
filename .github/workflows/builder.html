@@ -1,1 +1,88 @@
 
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>OpenWrt CI Builder</title>
+<style>
+body { font-family: Arial; padding:20px; }
+textarea { width:100%; height:200px; margin-top:10px; }
+</style>
+</head>
+
+<body>
+
+<h2>OpenWrt CI 一键生成器</h2>
+
+<h3>插件选择</h3>
+
+<label><input type="checkbox" id="passwall"> Passwall</label><br>
+<label><input type="checkbox" id="mosdns"> MosDNS</label><br>
+<label><input type="checkbox" id="lucky"> Lucky</label><br>
+<label><input type="checkbox" id="nowifi"> 去WiFi</label><br>
+
+<button onclick="generate()">生成配置</button>
+
+<h3>Packages.sh</h3>
+<textarea id="pkg"></textarea>
+
+<h3>Config</h3>
+<textarea id="config"></textarea>
+
+<script>
+function generate() {
+
+let pkg = `#!/bin/bash
+
+UPDATE_PACKAGE() {
+  rm -rf package/$1
+  git clone --depth=1 -b $3 https://github.com/$2.git package/$1
+}
+
+cd wrt
+`;
+
+let config = `CONFIG_TARGET_ipq60xx=y\n`;
+
+if (document.getElementById("passwall").checked) {
+  pkg += `
+UPDATE_PACKAGE passwall-packages xiaorouji/openwrt-passwall-packages main
+UPDATE_PACKAGE passwall xiaorouji/openwrt-passwall main
+`;
+  config += `CONFIG_PACKAGE_luci-app-passwall=y\n`;
+}
+
+if (document.getElementById("mosdns").checked) {
+  pkg += `
+rm -rf feeds/packages/net/mosdns
+rm -rf feeds/luci/applications/luci-app-mosdns
+UPDATE_PACKAGE mosdns sbwml/luci-app-mosdns v5
+`;
+  config += `
+CONFIG_PACKAGE_luci-app-mosdns=y
+CONFIG_PACKAGE_mosdns=y
+`;
+}
+
+if (document.getElementById("lucky").checked) {
+  pkg += `
+UPDATE_PACKAGE lucky gdy666/luci-app-lucky main
+`;
+  config += `CONFIG_PACKAGE_luci-app-lucky=y\n`;
+}
+
+if (document.getElementById("nowifi").checked) {
+  config += `
+CONFIG_PACKAGE_kmod-ath11k=n
+CONFIG_PACKAGE_wpad=n
+CONFIG_PACKAGE_hostapd=n
+`;
+}
+
+document.getElementById("pkg").value = pkg;
+document.getElementById("config").value = config;
+}
+</script>
+
+</body>
+</html>
